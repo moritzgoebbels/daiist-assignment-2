@@ -295,9 +295,9 @@
     "sliver_side": 0.01
   },
   "costs": {
-    "fp": 0.25,
+    "fp": 5.0,
     "fn": 50.0,
-    "tp": 0.25,
+    "tp": 0.0,
     "tn": 0.0,
     "base_rate": 0.0075,
     "board_defect_rate": 0.03,
@@ -307,7 +307,11 @@
     "labour_eur_per_hour": 45.0,
     "review_seconds_per_tile": 20,
     "verifier_accuracy": 0.95,
-    "tiles_per_day": 1920
+    "tiles_per_day": 1920,
+    "cost_review": 0.25,
+    "cost_auto_fail_fp": 5.0,
+    "hours_per_day": 16,
+    "hours_per_shift": 8
   },
   "operating_point": {
     "scorer": "finetuned",
@@ -319,8 +323,8 @@
     "tn": 83,
     "tpr": 0.9113300492610837,
     "fpr": 0.023529411764705882,
-    "cost_per_1000": 40.79821066357578,
-    "cost_per_1000_dataset_rate": 104.32567401960786
+    "cost_per_1000": 150.01593740944654,
+    "cost_per_1000_dataset_rate": 208.90931372549022
   },
   "operating_point_dataset_rate": {
     "scorer": "finetuned",
@@ -332,7 +336,285 @@
     "tn": 83,
     "tpr": 0.9113300492610837,
     "fpr": 0.023529411764705882,
-    "cost_per_1000": 40.79821066357578,
-    "cost_per_1000_dataset_rate": 104.32567401960786
+    "cost_per_1000": 150.01593740944654,
+    "cost_per_1000_dataset_rate": 208.90931372549022
+  },
+  "review_band": {
+    "lower": 0.05,
+    "upper": 0.72,
+    "cost_per_1000": 55.85362938278761,
+    "outcomes_per_1000": {
+      "pass": {
+        "tiles_defective": 0.6650246305418719,
+        "tiles_clean": 969.1470588235294,
+        "cost": 33.251231527093594
+      },
+      "review": {
+        "tiles_defective": 6.096059113300493,
+        "tiles_clean": 23.352941176470587,
+        "cost": 22.602397855694015
+      },
+      "fail": {
+        "tiles_defective": 0.7389162561576355,
+        "tiles_clean": 0.0,
+        "cost": 0.0
+      }
+    },
+    "confusion_per_1000": {
+      "tp": 6.530172413793103,
+      "fn": 0.9698275862068968,
+      "fp": 0.0,
+      "tn": 992.5
+    },
+    "confusion_cost_per_1000": {
+      "tp": 1.447814039408867,
+      "fn": 48.567580049261096,
+      "fp": 0.0,
+      "tn": 5.838235294117647
+    },
+    "review_share": 0.029449000289771078,
+    "review_tiles_per_day": 56.54208055636047,
+    "verifier_hours_per_day": 0.31412266975755815,
+    "verifiers_per_shift": 0.019632666859847384,
+    "tied_lower_range": [
+      0.05,
+      0.09
+    ],
+    "tied_upper_range": [
+      0.72,
+      0.72
+    ]
+  },
+  "alternatives": {
+    "model_alone": {
+      "lower": 0.05,
+      "upper": 0.05,
+      "cost_per_1000": 150.0159374094465,
+      "outcomes_per_1000": {
+        "pass": {
+          "tiles_defective": 0.6650246305418719,
+          "tiles_clean": 969.1470588235294,
+          "cost": 33.251231527093594
+        },
+        "review": {
+          "tiles_defective": 0.0,
+          "tiles_clean": 0.0,
+          "cost": 0.0
+        },
+        "fail": {
+          "tiles_defective": 6.834975369458128,
+          "tiles_clean": 23.352941176470587,
+          "cost": 116.76470588235293
+        }
+      },
+      "confusion_per_1000": {
+        "tp": 6.834975369458128,
+        "fn": 0.6650246305418719,
+        "fp": 23.352941176470587,
+        "tn": 969.1470588235294
+      },
+      "confusion_cost_per_1000": {
+        "tp": 0.0,
+        "fn": 33.251231527093594,
+        "fp": 116.76470588235293,
+        "tn": 0.0
+      },
+      "review_share": 0.0,
+      "review_tiles_per_day": 0.0,
+      "verifier_hours_per_day": 0.0,
+      "verifiers_per_shift": 0.0
+    },
+    "check_everything": {
+      "lower": -Infinity,
+      "upper": Infinity,
+      "cost_per_1000": 268.75,
+      "outcomes_per_1000": {
+        "pass": {
+          "tiles_defective": 0.0,
+          "tiles_clean": 0.0,
+          "cost": 0.0
+        },
+        "review": {
+          "tiles_defective": 7.5,
+          "tiles_clean": 992.5,
+          "cost": 268.75
+        },
+        "fail": {
+          "tiles_defective": 0.0,
+          "tiles_clean": 0.0,
+          "cost": 0.0
+        }
+      },
+      "confusion_per_1000": {
+        "tp": 7.125,
+        "fn": 0.37500000000000033,
+        "fp": 0.0,
+        "tn": 992.5
+      },
+      "confusion_cost_per_1000": {
+        "tp": 1.78125,
+        "fn": 18.843750000000018,
+        "fp": 0.0,
+        "tn": 248.125
+      },
+      "review_share": 1.0,
+      "review_tiles_per_day": 1920.0,
+      "verifier_hours_per_day": 10.666666666666666,
+      "verifiers_per_shift": 0.6666666666666666
+    },
+    "do_nothing": {
+      "lower": Infinity,
+      "upper": Infinity,
+      "cost_per_1000": 375.0,
+      "outcomes_per_1000": {
+        "pass": {
+          "tiles_defective": 7.5,
+          "tiles_clean": 992.5,
+          "cost": 375.0
+        },
+        "review": {
+          "tiles_defective": 0.0,
+          "tiles_clean": 0.0,
+          "cost": 0.0
+        },
+        "fail": {
+          "tiles_defective": 0.0,
+          "tiles_clean": 0.0,
+          "cost": 0.0
+        }
+      },
+      "confusion_per_1000": {
+        "tp": 0.0,
+        "fn": 7.5,
+        "fp": 0.0,
+        "tn": 992.5
+      },
+      "confusion_cost_per_1000": {
+        "tp": 0.0,
+        "fn": 375.0,
+        "fp": 0.0,
+        "tn": 0.0
+      },
+      "review_share": 0.0,
+      "review_tiles_per_day": 0.0,
+      "verifier_hours_per_day": 0.0,
+      "verifiers_per_shift": 0.0
+    }
+  },
+  "sensitivity": [
+    {
+      "case": "main case",
+      "changed": "",
+      "lower": 0.05,
+      "upper": 0.72,
+      "cost_per_1000": 55.85362938278761,
+      "review_share": 0.029449000289771078,
+      "verifier_hours_per_day": 0.31412266975755815
+    },
+    {
+      "case": "board defect rate 2%",
+      "changed": "BOARD_DEFECT_RATE",
+      "lower": 0.05,
+      "upper": 0.72,
+      "cost_per_1000": 39.1965372355839,
+      "review_share": 0.027475804114749345,
+      "verifier_hours_per_day": 0.2930752438906597
+    },
+    {
+      "case": "board defect rate 5%",
+      "changed": "BOARD_DEFECT_RATE",
+      "lower": 0.05,
+      "upper": 0.72,
+      "cost_per_1000": 89.16781367719504,
+      "review_share": 0.033395392639814545,
+      "verifier_hours_per_day": 0.3562175214913552
+    },
+    {
+      "case": "2.819 defective tiles per board (dataset)",
+      "changed": "DEFECTIVE_TILES_PER_DEFECTIVE_BOARD",
+      "lower": 0.05,
+      "upper": 0.72,
+      "cost_per_1000": 146.77359068627453,
+      "review_share": 0.04021936274509804,
+      "verifier_hours_per_day": 0.42900653594771243
+    },
+    {
+      "case": "labour 13 EUR/h",
+      "changed": "LABOUR_EUR_PER_HOUR",
+      "lower": 0.05,
+      "upper": 0.72,
+      "cost_per_1000": 50.61825155349497,
+      "review_share": 0.029449000289771078,
+      "verifier_hours_per_day": 0.31412266975755815
+    },
+    {
+      "case": "COST_FN 12 EUR",
+      "changed": "COST_FN",
+      "lower": 0.05,
+      "upper": 0.72,
+      "cost_per_1000": 19.00018110692553,
+      "review_share": 0.029449000289771078,
+      "verifier_hours_per_day": 0.31412266975755815
+    },
+    {
+      "case": "COST_FN 500 EUR",
+      "changed": "COST_FN",
+      "lower": 0.0,
+      "upper": 0.05,
+      "cost_per_1000": 375.84334250941754,
+      "review_share": 0.9698120834540713,
+      "verifier_hours_per_day": 10.344662223510095
+    },
+    {
+      "case": "COST_AUTO_FAIL_FP 15 EUR",
+      "changed": "COST_AUTO_FAIL_FP",
+      "lower": 0.05,
+      "upper": 0.72,
+      "cost_per_1000": 55.85362938278761,
+      "review_share": 0.029449000289771078,
+      "verifier_hours_per_day": 0.31412266975755815
+    },
+    {
+      "case": "verifier accuracy 90%",
+      "changed": "VERIFIER_ACCURACY",
+      "lower": 0.05,
+      "upper": 0.72,
+      "cost_per_1000": 71.09377716603882,
+      "review_share": 0.029449000289771078,
+      "verifier_hours_per_day": 0.31412266975755815
+    },
+    {
+      "case": "verifier accuracy 99%",
+      "changed": "VERIFIER_ACCURACY",
+      "lower": 0.05,
+      "upper": 0.72,
+      "cost_per_1000": 43.66151115618661,
+      "review_share": 0.029449000289771078,
+      "verifier_hours_per_day": 0.31412266975755815
+    },
+    {
+      "case": "slivers ignored",
+      "changed": "labels",
+      "lower": 0.05,
+      "upper": 0.72,
+      "cost_per_1000": 44.33823529411766,
+      "review_share": 0.029660633484162893,
+      "verifier_hours_per_day": 0.3163800904977375
+    }
+  ],
+  "bootstrap": {
+    "n": 1000,
+    "lower_p5_p95": [
+      0.04,
+      0.05
+    ],
+    "upper_p5_p95": [
+      0.05,
+      0.72
+    ],
+    "cost_p5_p95": [
+      30.639429178055448,
+      69.66566957563658
+    ]
   }
 }
