@@ -1,0 +1,84 @@
+{
+  "roboflow": {
+    "preprocessing": {
+      "tile": {
+        "columns": "2",
+        "rows": "2"
+      },
+      "resize": {
+        "width": "640",
+        "format": "Stretch to",
+        "height": "640"
+      }
+    },
+    "augmentation": {
+      "image": {
+        "versions": 3
+      },
+      "brightness": {
+        "brighten": true,
+        "percent": 10,
+        "darken": true
+      },
+      "ninety": {
+        "clockwise": true,
+        "upside-down": false,
+        "counter-clockwise": true
+      }
+    }
+  },
+  "train": {
+    "photos": 417,
+    "tiles": 4912,
+    "defect_free_tiles": 1559,
+    "boxes": 5685,
+    "boxes_per_class": {
+      "missing_hole": 207,
+      "mouse_bite": 1091,
+      "open_circuit": 1082,
+      "short": 1061,
+      "spur": 1109,
+      "spurious_copper": 1135
+    },
+    "box_side_median": 0.06810779599282303,
+    "box_side_median_px": 43.58898943540674,
+    "sliver_boxes": 211,
+    "sliver_only_tiles": 81
+  },
+  "valid": {
+    "photos": 117,
+    "tiles": 468,
+    "defect_free_tiles": 149,
+    "boxes": 547,
+    "boxes_per_class": {
+      "missing_hole": 23,
+      "mouse_bite": 93,
+      "open_circuit": 110,
+      "short": 105,
+      "spur": 102,
+      "spurious_copper": 114
+    },
+    "box_side_median": 0.06875,
+    "box_side_median_px": 44.0,
+    "sliver_boxes": 17,
+    "sliver_only_tiles": 8
+  },
+  "test": {
+    "photos": 72,
+    "tiles": 288,
+    "defect_free_tiles": 85,
+    "boxes": 334,
+    "boxes_per_class": {
+      "missing_hole": 15,
+      "mouse_bite": 67,
+      "open_circuit": 55,
+      "short": 68,
+      "spur": 72,
+      "spurious_copper": 57
+    },
+    "box_side_median": 0.0691726100372791,
+    "box_side_median_px": 44.270470423858626,
+    "sliver_boxes": 13,
+    "sliver_only_tiles": 8
+  }
+}

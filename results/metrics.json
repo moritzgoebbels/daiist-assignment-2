@@ -272,6 +272,13 @@
     "only_slivers": 8,
     "boards": 72
   },
+  "training": {
+    "epochs_completed": 71,
+    "best_epoch": 51,
+    "best_val_map50": 0.87819,
+    "best_val_map50_95": 0.40519,
+    "train_hours": 2.1304527777777778
+  },
   "setup": {
     "dataset": {
       "workspace": "srtimagedefectdetection-wuadb",

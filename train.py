@@ -637,17 +637,56 @@ def save_sweep(metrics: dict, tiles: pd.DataFrame) -> None:
     print("\nSaved results/ (metrics.json, threshold_sweep.csv, review band, sensitivity, plots)")
 
 
+def dataset_summary() -> dict:
+    """What the report says about the dataset, computed from the downloaded labels."""
+    version = Roboflow(api_key=load_api_key()).workspace(WORKSPACE).project(PROJECT).version(VERSION)
+    summary = {"roboflow": {"preprocessing": version.preprocessing, "augmentation": version.augmentation}}
+    for split in ("train", "valid", "test"):
+        images = sorted((DATASET_DIR / split / "images").glob("*.jpg"))
+        boxes = {img.name: read_labels(DATASET_DIR / split / "labels" / f"{img.stem}.txt") for img in images}
+        all_boxes = [b for bs in boxes.values() for b in bs]
+        sides = np.sqrt([w * h for _, w, h in all_boxes])  # box size as sqrt(area), relative to the tile side
+        summary[split] = {
+            "photos": len({img.stem.split(".rf.")[0] for img in images}),  # augmented copies share a source name
+            "tiles": len(images),
+            "defect_free_tiles": sum(not bs for bs in boxes.values()),
+            "boxes": len(all_boxes),
+            "boxes_per_class": {name: sum(b[0] == c for b in all_boxes) for c, name in enumerate(CLASS_NAMES)},
+            "box_side_median": float(np.median(sides)),
+            "box_side_median_px": float(np.median(sides) * IMGSZ),
+            "sliver_boxes": sum(is_sliver(b) for b in all_boxes),
+            "sliver_only_tiles": sum(bool(bs) and all(is_sliver(b) for b in bs) for bs in boxes.values()),
+        }
+    return summary
+
+
+def training_summary() -> dict:
+    """Epochs run, best epoch and wall time, from the Ultralytics log of the training run."""
+    log = pd.read_csv(RUNS_DIR / RUN_NAME / "results.csv")
+    log.columns = [c.strip() for c in log.columns]
+    best = log.loc[log["metrics/mAP50-95(B)"].idxmax()]  # this Ultralytics version's fitness is mAP50-95
+    return {
+        "epochs_completed": int(log.epoch.max()),
+        "best_epoch": int(best.epoch),
+        "best_val_map50": float(best["metrics/mAP50(B)"]),
+        "best_val_map50_95": float(best["metrics/mAP50-95(B)"]),
+        "train_hours": float(log.time.iloc[-1] / 3600),
+    }
+
+
 def main() -> None:
     device = pick_device()
     data_yaml = download_dataset()
+    RESULTS_DIR.mkdir(exist_ok=True)
+    (RESULTS_DIR / "dataset_summary.json").write_text(json.dumps(dataset_summary(), indent=2))
     weights = train(data_yaml, device)
     metrics, tiles = evaluate(weights, data_yaml, device)
+    metrics["training"] = training_summary()
     metrics["setup"] = {
         "dataset": {"workspace": WORKSPACE, "project": PROJECT, "version": VERSION},
         "base_model": BASE_MODEL, "imgsz": IMGSZ, "epochs": EPOCHS, "patience": PATIENCE,
         "seed": SEED, "train_device": device, "class_names": CLASS_NAMES, "sliver_side": SLIVER_SIDE,
     }
-    RESULTS_DIR.mkdir(exist_ok=True)
     tiles.to_csv(RESULTS_DIR / "test_tiles.csv", index=False)
     save_sweep(metrics, tiles)
 
