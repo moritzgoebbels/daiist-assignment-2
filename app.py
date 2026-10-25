@@ -25,6 +25,7 @@ ROOT = Path(__file__).resolve().parent
 RESULTS = ROOT / "results"
 TILE_SIZE = 640
 TILE_NAMES = ["top-left", "top-right", "bottom-left", "bottom-right"]
+TILE_COLUMNS = ["tile", "max score", "decision", "boxes", "classes"]
 
 # Dark-theme chart colours; decision colours are reserved for pass / review / fail only.
 INK, MUTED, GRID = "#f0efec", "#898781", "#2c2c2a"
@@ -100,7 +101,7 @@ def colour_decision(value: str) -> str:
 
 def render(predictions: list | None, lower: float, upper: float):
     if not predictions:
-        return None, pd.DataFrame()
+        return None, pd.DataFrame(columns=TILE_COLUMNS)
     panels, rows = [], []
     for name, r in predictions:
         max_score = float(r.boxes.conf.max()) if len(r.boxes) else 0.0
@@ -110,7 +111,7 @@ def render(predictions: list | None, lower: float, upper: float):
                                  decision))
         classes = sorted({shown.names[int(c)] for c in shown.boxes.cls})
         rows.append({"tile": name, "max score": max_score, "decision": decision,
-                     "boxes shown": len(shown.boxes), "classes": ", ".join(classes)})
+                     "boxes": len(shown.boxes), "classes": ", ".join(classes)})
     table = pd.DataFrame(rows).style.map(colour_decision, subset=["decision"]).format({"max score": "{:.3f}"})
     return compose(panels), table
 
@@ -338,10 +339,9 @@ with gr.Blocks(title="PCB defect review band") as demo:
             gr.Markdown("Upload a 640x640 tile, or a full board photo (split into 2x2 tiles like the training data). "
                         "Boxes below the lower threshold are hidden.")
             with gr.Row():
-                with gr.Column(scale=1):
-                    image = gr.Image(type="pil", label="Tile or board photo", sources=["upload"], height=320)
-                    tile_table = gr.Dataframe(interactive=False, wrap=True)
+                image = gr.Image(type="pil", label="Tile or board photo", sources=["upload"], height=320, scale=1)
                 tiles_view = gr.Image(type="pil", label="Tiles", interactive=False, height=640, scale=2)
+            tile_table = gr.Dataframe(pd.DataFrame(columns=TILE_COLUMNS), interactive=False, wrap=True)
             predictions = gr.State()
 
         with gr.Tab("Model performance"):
