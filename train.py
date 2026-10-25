@@ -7,8 +7,10 @@ scores every test tile, sweeps the tile-level threshold and writes everything th
 app needs to results/. The trained model goes to weights/best.pt.
 
     uv run python main.py train
+    uv run python train.py --sweep-only   # after changing the cost parameters, no retraining
 """
 
+import argparse
 import json
 import shutil
 from pathlib import Path
@@ -267,18 +269,9 @@ def evaluate(weights: Path, data_yaml: Path, device: str) -> tuple[dict, pd.Data
     return metrics, tiles
 
 
-def main() -> None:
-    device = pick_device()
-    data_yaml = download_dataset()
-    weights = train(data_yaml, device)
-    metrics, tiles = evaluate(weights, data_yaml, device)
+def save_sweep(metrics: dict, tiles: pd.DataFrame) -> None:
+    """Sweep, pick the operating point from the current cost parameters, and write results/."""
     sweep_df = sweep(tiles)
-
-    metrics["setup"] = {
-        "dataset": {"workspace": WORKSPACE, "project": PROJECT, "version": VERSION},
-        "base_model": BASE_MODEL, "imgsz": IMGSZ, "epochs": EPOCHS, "patience": PATIENCE,
-        "seed": SEED, "train_device": device, "class_names": CLASS_NAMES, "sliver_side": SLIVER_SIDE,
-    }
     metrics["costs"] = {"fp": COST_FP, "fn": COST_FN, "tp": COST_TP, "tn": COST_TN, "base_rate": BASE_RATE}
     if costs_set():
         best = sweep_df.query("scorer == 'finetuned' and labels == 'all_labels'").nsmallest(1, "cost_per_1000")
@@ -287,12 +280,38 @@ def main() -> None:
         metrics["operating_point"] = None
         print("\nCost parameters at the top of train.py are not set; sweep saved without costs.")
 
-    RESULTS_DIR.mkdir(exist_ok=True)
     (RESULTS_DIR / "metrics.json").write_text(json.dumps(metrics, indent=2))
-    tiles.to_csv(RESULTS_DIR / "test_tiles.csv", index=False)
     sweep_df.to_csv(RESULTS_DIR / "threshold_sweep.csv", index=False)
-    print(f"\nSaved {WEIGHTS_PATH.relative_to(ROOT)} and results/ (metrics.json, test_tiles.csv, threshold_sweep.csv)")
+    print("\nSaved results/metrics.json and results/threshold_sweep.csv")
+
+
+def main() -> None:
+    device = pick_device()
+    data_yaml = download_dataset()
+    weights = train(data_yaml, device)
+    metrics, tiles = evaluate(weights, data_yaml, device)
+    metrics["setup"] = {
+        "dataset": {"workspace": WORKSPACE, "project": PROJECT, "version": VERSION},
+        "base_model": BASE_MODEL, "imgsz": IMGSZ, "epochs": EPOCHS, "patience": PATIENCE,
+        "seed": SEED, "train_device": device, "class_names": CLASS_NAMES, "sliver_side": SLIVER_SIDE,
+    }
+    RESULTS_DIR.mkdir(exist_ok=True)
+    tiles.to_csv(RESULTS_DIR / "test_tiles.csv", index=False)
+    save_sweep(metrics, tiles)
+
+
+def sweep_only() -> None:
+    # Cost changes only need the saved tile scores, not a new model.
+    metrics = json.loads((RESULTS_DIR / "metrics.json").read_text())
+    tiles = pd.read_csv(RESULTS_DIR / "test_tiles.csv")
+    save_sweep(metrics, tiles)
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--sweep-only", action="store_true",
+                        help="recompute the cost sweep from results/test_tiles.csv without training")
+    if parser.parse_args().sweep_only:
+        sweep_only()
+    else:
+        main()
