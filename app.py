@@ -236,7 +236,29 @@ def update_dashboard(lower: float, upper: float):
         upper, note = lower, "*Lower is above upper, so upper is treated as equal to lower (no review band).*"
     b = train.band_breakdown(TRUTH, SCORE, lower, upper, PARAMS)
     return (*summary_cards(b), note, cost_curve(lower, upper, b["cost_per_1000"]),
-            routing_table(b, lower, upper), confusion_table(b), comparison_table(lower, upper))
+            routing_table(b, lower, upper), confusion_table(b), comparison_table(lower, upper),
+            *board_view(lower, upper))
+
+
+def board_view(lower: float, upper: float) -> tuple[str, Styler]:
+    """Secondary view: each test board routed by its 4 tiles."""
+    s, boards = train.board_rollup(tiles, lower, upper, costs["verifier_accuracy"])
+    text = (
+        f"{s['boards']} test boards: **{s['passed']}** passed, **{s['reviewed']}** reviewed, "
+        f"**{s['failed']}** failed. Board recall: **{s['recall_flagged']:.1%}** flagged (reviewed or failed), "
+        f"**{s['recall_after_verifier']:.1%}** expected after the verifier.\n\n"
+        f"*{s['note']} Test boards carry {boards.defective_tiles.mean():.1f} defective tiles on average, "
+        f"so board recall here is higher than for a production board with one defect.*"
+    )
+    table = (boards.groupby("decision").agg(boards=("board_photo", "size"),
+                                            avg_defective_tiles=("defective_tiles", "mean"),
+                                            avg_p_caught=("p_caught", "mean"))
+             .reindex(["pass", "review", "fail"]).fillna(0).reset_index()
+             .rename(columns={"decision": "Board decision", "boards": "Boards",
+                              "avg_defective_tiles": "Defective tiles per board",
+                              "avg_p_caught": "Chance a defect is caught"}))
+    return text, table.style.map(colour_decision, subset=["Board decision"]).format(
+        {"Boards": "{:.0f}", "Defective tiles per board": "{:.1f}", "Chance a defect is caught": "{:.1%}"})
 
 
 # --- Static model results ------------------------------------------------------------
@@ -293,6 +315,20 @@ CASE_NAMES = {
 }
 
 
+def crossover_table() -> pd.DataFrame:
+    c = pd.DataFrame(metrics["crossovers"])
+    fmt = lambda v: "—" if pd.isna(v) else f"{v:.4g}"
+    return pd.DataFrame({
+        "Assumption": c.label,
+        "Main value": c.main_value.map(fmt),
+        "Direction": c.direction,
+        "Band changes at": c.crossover.map(fmt),
+        "Band before": c.band_before,
+        "Band after": c.band_after.fillna("—"),
+        "In other units": c.note,
+    })
+
+
 def sensitivity_table() -> pd.DataFrame:
     s = pd.DataFrame(metrics["sensitivity"])
     return pd.DataFrame({
@@ -334,6 +370,10 @@ with gr.Blocks(title="PCB defect review band") as demo:
             confusion = gr.Dataframe(interactive=False, wrap=True)
             gr.Markdown("**Compared with the alternatives**")
             comparison = gr.Dataframe(interactive=False, wrap=True)
+            gr.Markdown("**Board-level view** (secondary: a board fails if any tile fails, is reviewed if any "
+                        "tile is reviewed and none fails, else passes)")
+            board_text = gr.Markdown()
+            board_table = gr.Dataframe(interactive=False, wrap=True)
 
         with gr.Tab("Inspect an image"):
             gr.Markdown("Upload a 640x640 tile, or a full board photo (split into 2x2 tiles like the training data). "
@@ -356,6 +396,9 @@ with gr.Blocks(title="PCB defect review band") as demo:
         with gr.Tab("Sensitivity"):
             gr.Markdown("**Cost-minimising band when one assumption changes**")
             gr.Dataframe(sensitivity_table(), interactive=False, wrap=True)
+            gr.Markdown("**Crossover points**: how far each assumption can move from the main case, down or up, "
+                        "before the cost-minimising band changes (other assumptions held at the main case)")
+            gr.Dataframe(crossover_table(), interactive=False, wrap=True)
             bs = metrics["bootstrap"]
             gr.Markdown(
                 f"**Bootstrap** ({bs['n']} resamples of the test tiles), 5th-95th percentile: "
@@ -365,7 +408,8 @@ with gr.Blocks(title="PCB defect review band") as demo:
             )
             gr.Image(str(RESULTS / "band_heatmap.png"), label="Band cost over (lower, upper)", interactive=False)
 
-    dashboard = [cost_card, review_card, staff_card, band_note, curve, routing, confusion, comparison]
+    dashboard = [cost_card, review_card, staff_card, band_note, curve, routing, confusion, comparison,
+                 board_text, board_table]
     gr.on([lower.change, upper.change], update_dashboard, inputs=[lower, upper], outputs=dashboard)
     gr.on([lower.change, upper.change], render, inputs=[predictions, lower, upper], outputs=[tiles_view, tile_table])
     image.change(inspect, inputs=[image, lower, upper], outputs=[predictions, tiles_view, tile_table])

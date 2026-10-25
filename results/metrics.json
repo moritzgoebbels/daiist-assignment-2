@@ -616,5 +616,129 @@
       30.639429178055448,
       69.66566957563658
     ]
+  },
+  "crossovers": [
+    {
+      "parameter": "cost_fn",
+      "label": "Missed defect cost (EUR)",
+      "main_value": 50.0,
+      "direction": "down",
+      "searched_to": 0.01,
+      "crossover": 1.271269975294744,
+      "band_before": "0.05 / 0.72",
+      "band_after": "0.72 / 0.72",
+      "note": ""
+    },
+    {
+      "parameter": "cost_fn",
+      "label": "Missed defect cost (EUR)",
+      "main_value": 50.0,
+      "direction": "up",
+      "searched_to": 10000.0,
+      "crossover": 222.0478156174751,
+      "band_before": "0.05 / 0.72",
+      "band_after": "0.02 / 0.72",
+      "note": ""
+    },
+    {
+      "parameter": "cost_auto_fail_fp",
+      "label": "Scrapped good board cost (EUR)",
+      "main_value": 5.0,
+      "direction": "down",
+      "searched_to": 0.01,
+      "crossover": 0.9678608653571739,
+      "band_before": "0.05 / 0.72",
+      "band_after": "0.05 / 0.05",
+      "note": ""
+    },
+    {
+      "parameter": "cost_auto_fail_fp",
+      "label": "Scrapped good board cost (EUR)",
+      "main_value": 5.0,
+      "direction": "up",
+      "searched_to": 10000.0,
+      "crossover": NaN,
+      "band_before": "0.05 / 0.72",
+      "band_after": NaN,
+      "note": "no change in searched range"
+    },
+    {
+      "parameter": "verifier_accuracy",
+      "label": "Verifier accuracy",
+      "main_value": 0.95,
+      "direction": "down",
+      "searched_to": 0.0,
+      "crossover": 0.6410715389185973,
+      "band_before": "0.05 / 0.72",
+      "band_after": "0.05 / 0.05",
+      "note": ""
+    },
+    {
+      "parameter": "verifier_accuracy",
+      "label": "Verifier accuracy",
+      "main_value": 0.95,
+      "direction": "up",
+      "searched_to": 1.0,
+      "crossover": NaN,
+      "band_before": "0.05 / 0.72",
+      "band_after": NaN,
+      "note": "no change in searched range"
+    },
+    {
+      "parameter": "cost_review",
+      "label": "Review cost per tile (EUR)",
+      "main_value": 0.25,
+      "direction": "down",
+      "searched_to": 0.001,
+      "crossover": 0.05629418134666066,
+      "band_before": "0.05 / 0.72",
+      "band_after": "0.02 / 0.72",
+      "note": "labour EUR 10.13/h at 20 s, or 4.5 s at EUR 45/h"
+    },
+    {
+      "parameter": "cost_review",
+      "label": "Review cost per tile (EUR)",
+      "main_value": 0.25,
+      "direction": "up",
+      "searched_to": 1000.0,
+      "crossover": 3.447470443822354,
+      "band_before": "0.05 / 0.72",
+      "band_after": "0.05 / 0.05",
+      "note": "labour EUR 620.54/h at 20 s, or 275.8 s at EUR 45/h"
+    },
+    {
+      "parameter": "base_rate",
+      "label": "Tile base rate",
+      "main_value": 0.0075,
+      "direction": "down",
+      "searched_to": 1e-05,
+      "crossover": 0.0001531421872400875,
+      "band_before": "0.05 / 0.72",
+      "band_after": "0.72 / 0.72",
+      "note": "board defect rate 0.06%"
+    },
+    {
+      "parameter": "base_rate",
+      "label": "Tile base rate",
+      "main_value": 0.0075,
+      "direction": "up",
+      "searched_to": 0.99,
+      "crossover": 0.0325980047772938,
+      "band_before": "0.05 / 0.72",
+      "band_after": "0.02 / 0.72",
+      "note": "board defect rate 13.04%"
+    }
+  ],
+  "board_rollup": {
+    "lower": 0.05,
+    "upper": 0.72,
+    "boards": 72,
+    "defective_boards": 72,
+    "passed": 0,
+    "reviewed": 58,
+    "failed": 14,
+    "recall_flagged": 1.0,
+    "recall_after_verifier": 0.993184982638889,
+    "note": "All test boards are defective, so no board-level false positive rate can be measured."
   }
 }

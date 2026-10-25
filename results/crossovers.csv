@@ -1,0 +1,11 @@
+parameter,label,main_value,direction,searched_to,crossover,band_before,band_after,note
+cost_fn,Missed defect cost (EUR),50.0,down,0.01,1.271269975294744,0.05 / 0.72,0.72 / 0.72,
+cost_fn,Missed defect cost (EUR),50.0,up,10000.0,222.0478156174751,0.05 / 0.72,0.02 / 0.72,
+cost_auto_fail_fp,Scrapped good board cost (EUR),5.0,down,0.01,0.9678608653571739,0.05 / 0.72,0.05 / 0.05,
+cost_auto_fail_fp,Scrapped good board cost (EUR),5.0,up,10000.0,,0.05 / 0.72,,no change in searched range
+verifier_accuracy,Verifier accuracy,0.95,down,0.0,0.6410715389185973,0.05 / 0.72,0.05 / 0.05,
+verifier_accuracy,Verifier accuracy,0.95,up,1.0,,0.05 / 0.72,,no change in searched range
+cost_review,Review cost per tile (EUR),0.25,down,0.001,0.05629418134666066,0.05 / 0.72,0.02 / 0.72,"labour EUR 10.13/h at 20 s, or 4.5 s at EUR 45/h"
+cost_review,Review cost per tile (EUR),0.25,up,1000.0,3.447470443822354,0.05 / 0.72,0.05 / 0.05,"labour EUR 620.54/h at 20 s, or 275.8 s at EUR 45/h"
+base_rate,Tile base rate,0.0075,down,1e-05,0.0001531421872400875,0.05 / 0.72,0.72 / 0.72,board defect rate 0.06%
+base_rate,Tile base rate,0.0075,up,0.99,0.0325980047772938,0.05 / 0.72,0.02 / 0.72,board defect rate 13.04%

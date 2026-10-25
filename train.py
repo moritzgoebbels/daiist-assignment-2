@@ -437,6 +437,85 @@ def bootstrap_band(tiles: pd.DataFrame) -> dict:
     return {"n": N_BOOTSTRAP, "lower_p5_p95": pct(0), "upper_p5_p95": pct(1), "cost_p5_p95": pct(2)}
 
 
+# Parameter: (label, lowest and highest value searched, log-spaced search).
+CROSSOVER_SEARCH = {
+    "cost_fn": ("Missed defect cost (EUR)", 0.01, 10_000, True),
+    "cost_auto_fail_fp": ("Scrapped good board cost (EUR)", 0.01, 10_000, True),
+    "verifier_accuracy": ("Verifier accuracy", 0.0, 1.0, False),
+    "cost_review": ("Review cost per tile (EUR)", 0.001, 1_000, True),
+    "base_rate": ("Tile base rate", 1e-5, 0.99, True),
+}
+
+
+def first_band_change(truth, score, key: str, start: float, end: float, log: bool) -> tuple[float, tuple] | None:
+    """Nearest value from start towards end where the chosen band changes, refined by bisection."""
+    band = lambda v: band_optimum(truth, score, band_params(**{key: v}))[:2]
+    base = band(start)
+    steps = np.geomspace(start, end, 400) if log else np.linspace(start, end, 400)
+    for same, changed in zip(steps[:-1], steps[1:]):
+        if band(changed) != base:
+            for _ in range(50):
+                mid = np.sqrt(same * changed) if log else (same + changed) / 2
+                same, changed = (mid, changed) if band(mid) == base else (same, mid)
+            return float(changed), band(changed)
+    return None
+
+
+def crossover_note(key: str, value: float) -> str:
+    # Translate a crossover back into the units the assumptions were stated in.
+    if key == "base_rate":
+        return f"board defect rate {value * TILES_PER_BOARD / DEFECTIVE_TILES_PER_DEFECTIVE_BOARD:.2%}"
+    if key == "cost_review":
+        return (f"labour EUR {value * 3600 / REVIEW_SECONDS_PER_TILE:.2f}/h at {REVIEW_SECONDS_PER_TILE} s, "
+                f"or {value / LABOUR_EUR_PER_HOUR * 3600:.1f} s at EUR {LABOUR_EUR_PER_HOUR:.0f}/h")
+    return ""
+
+
+def crossovers(tiles: pd.DataFrame) -> pd.DataFrame:
+    """For each assumption, how far it can move (down and up) before the chosen band changes."""
+    truth, score = tile_truth_and_score(tiles)
+    main = band_params()
+    lower, upper, _ = band_optimum(truth, score, main)
+    rows = []
+    for key, (label, low, high, log) in CROSSOVER_SEARCH.items():
+        for direction, end in (("down", low), ("up", high)):
+            found = first_band_change(truth, score, key, main[key], end, log)
+            rows.append({
+                "parameter": key, "label": label, "main_value": main[key], "direction": direction,
+                "searched_to": end, "crossover": found[0] if found else None,
+                "band_before": f"{lower:.2f} / {upper:.2f}",
+                "band_after": f"{found[1][0]:.2f} / {found[1][1]:.2f}" if found else None,
+                "note": crossover_note(key, found[0]) if found else "no change in searched range",
+            })
+    return pd.DataFrame(rows)
+
+
+def board_rollup(tiles: pd.DataFrame, lower: float, upper: float, verifier_accuracy: float) -> tuple[dict, pd.DataFrame]:
+    """Board = its 4 tiles: fail if any tile fails, review if any is reviewed and none fails, else pass."""
+    t = tiles.assign(decision=np.select([tiles.max_conf < lower, tiles.max_conf < upper], ["pass", "review"], "fail"))
+    rows = []
+    for board, g in t.groupby("board_photo"):
+        defective = g.gt_defect == 1
+        decision = "fail" if (g.decision == "fail").any() else "review" if (g.decision == "review").any() else "pass"
+        reviewed_defects = int((defective & (g.decision == "review")).sum())
+        # Caught if a defective tile auto-fails, else if the verifier spots one of its reviewed defective tiles.
+        caught = 1.0 if (defective & (g.decision == "fail")).any() else 1 - (1 - verifier_accuracy) ** reviewed_defects
+        rows.append({"board_photo": board, "board_score": g.max_conf.max(), "decision": decision,
+                     "defective_tiles": int(defective.sum()), "reviewed_defective_tiles": reviewed_defects,
+                     "p_caught": caught})
+    boards = pd.DataFrame(rows)
+    counts = boards.decision.value_counts()
+    summary = {
+        "lower": lower, "upper": upper, "boards": len(boards),
+        "defective_boards": int((boards.defective_tiles > 0).sum()),
+        "passed": int(counts.get("pass", 0)), "reviewed": int(counts.get("review", 0)), "failed": int(counts.get("fail", 0)),
+        "recall_flagged": float((boards.decision != "pass").mean()),
+        "recall_after_verifier": float(boards.p_caught.mean()),
+        "note": "All test boards are defective, so no board-level false positive rate can be measured.",
+    }
+    return summary, boards
+
+
 SERIES_BLUE, HIGHLIGHT, INK, MUTED, GRID, SURFACE = "#2a78d6", "#eb6834", "#0b0b0b", "#52514e", "#e1e0d9", "#fcfcfb"
 
 
@@ -513,10 +592,16 @@ def save_review_band(metrics: dict, tiles: pd.DataFrame, sweep_df: pd.DataFrame)
     sens = sensitivity(tiles)
     metrics["sensitivity"] = sens.to_dict(orient="records")
     metrics["bootstrap"] = bootstrap_band(tiles)
+    cross = crossovers(tiles)
+    metrics["crossovers"] = cross.to_dict(orient="records")
+    board_summary, boards = board_rollup(tiles, lower, upper, VERIFIER_ACCURACY)
+    metrics["board_rollup"] = board_summary
     metrics["costs"].update(cost_review=COST_REVIEW, cost_auto_fail_fp=COST_AUTO_FAIL_FP,
                             hours_per_day=HOURS_PER_DAY, hours_per_shift=HOURS_PER_SHIFT)
 
     sens.to_csv(RESULTS_DIR / "sensitivity.csv", index=False)
+    cross.to_csv(RESULTS_DIR / "crossovers.csv", index=False)
+    boards.to_csv(RESULTS_DIR / "board_rollup.csv", index=False)
     i_lo, i_up = np.meshgrid(THRESHOLDS, THRESHOLDS, indexing="ij")
     pd.DataFrame({"lower": i_lo.ravel(), "upper": i_up.ravel(), "cost_per_1000": grid.ravel()}).dropna().to_csv(
         RESULTS_DIR / "band_grid.csv", index=False)
