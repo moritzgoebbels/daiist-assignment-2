@@ -295,11 +295,44 @@
     "sliver_side": 0.01
   },
   "costs": {
-    "fp": null,
-    "fn": null,
-    "tp": null,
-    "tn": null,
-    "base_rate": null
+    "fp": 0.25,
+    "fn": 50.0,
+    "tp": 0.25,
+    "tn": 0.0,
+    "base_rate": 0.0075,
+    "board_defect_rate": 0.03,
+    "defective_tiles_per_defective_board": 1,
+    "base_rate_dataset": 0.021145833333333332,
+    "defective_tiles_per_defective_board_dataset": 2.8194444444444446,
+    "labour_eur_per_hour": 45.0,
+    "review_seconds_per_tile": 20,
+    "verifier_accuracy": 0.95,
+    "tiles_per_day": 1920
   },
-  "operating_point": null
+  "operating_point": {
+    "scorer": "finetuned",
+    "labels": "all_labels",
+    "threshold": 0.05,
+    "tp": 185,
+    "fp": 2,
+    "fn": 18,
+    "tn": 83,
+    "tpr": 0.9113300492610837,
+    "fpr": 0.023529411764705882,
+    "cost_per_1000": 40.79821066357578,
+    "cost_per_1000_dataset_rate": 104.32567401960786
+  },
+  "operating_point_dataset_rate": {
+    "scorer": "finetuned",
+    "labels": "all_labels",
+    "threshold": 0.05,
+    "tp": 185,
+    "fp": 2,
+    "fn": 18,
+    "tn": 83,
+    "tpr": 0.9113300492610837,
+    "fpr": 0.023529411764705882,
+    "cost_per_1000": 40.79821066357578,
+    "cost_per_1000_dataset_rate": 104.32567401960786
+  }
 }

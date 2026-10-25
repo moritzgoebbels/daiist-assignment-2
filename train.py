@@ -24,13 +24,30 @@ from ultralytics import YOLO
 
 from api_key import load_api_key
 
-# --- Cost parameters (set these yourself, see REPORT.md) -----------------------
+# --- Cost parameters (see REPORT.md) -------------------------------------------
 # Unit = one tile (a quarter of a board). Positive = the tile contains any defect.
-COST_FP = None  # EUR, clean tile flagged as defective
-COST_FN = None  # EUR, defective tile passed
-COST_TP = None  # EUR, defective tile flagged
-COST_TN = None  # EUR, clean tile passed
-BASE_RATE = None  # share of production tiles that contain a defect (0-1)
+LABOUR_EUR_PER_HOUR = 45.0  # Eurostat, total employer labour cost, Germany
+REVIEW_SECONDS_PER_TILE = 20
+COST_FP = REVIEW_SECONDS_PER_TILE / 3600 * LABOUR_EUR_PER_HOUR  # EUR, verifier checks a clean tile
+COST_FN = 50.0  # EUR, defect missed at fabrication, found at assembly
+COST_TP = REVIEW_SECONDS_PER_TILE / 3600 * LABOUR_EUR_PER_HOUR  # EUR, verifier confirms a real defect
+COST_TN = 0.0  # EUR, clean tile passed
+
+# Board-level defect rate converted to tiles. Main case: a real defective board has one
+# isolated defect, so one defective tile. Sensitivity: the test split's 203 defective
+# tiles / 72 boards = 2.82, inflated by the dataset's several synthetic defects per photo.
+BOARD_DEFECT_RATE = 0.03  # share of production boards with any defect
+TILES_PER_BOARD = 4
+DEFECTIVE_TILES_PER_DEFECTIVE_BOARD = 1
+DEFECTIVE_TILES_PER_DEFECTIVE_BOARD_DATASET = 203 / 72
+BASE_RATE = BOARD_DEFECT_RATE * DEFECTIVE_TILES_PER_DEFECTIVE_BOARD / TILES_PER_BOARD
+BASE_RATE_DATASET = BOARD_DEFECT_RATE * DEFECTIVE_TILES_PER_DEFECTIVE_BOARD_DATASET / TILES_PER_BOARD
+
+# Review band (not used by the sweep yet).
+VERIFIER_ACCURACY = 0.95  # share of real defects the verifier catches
+BOARDS_PER_HOUR = 30
+HOURS_PER_DAY = 16
+TILES_PER_DAY = BOARDS_PER_HOUR * HOURS_PER_DAY * TILES_PER_BOARD  # 1920
 
 # --- Data ----------------------------------------------------------------------
 WORKSPACE = "srtimagedefectdetection-wuadb"
@@ -214,10 +231,11 @@ def costs_set() -> bool:
     return None not in (COST_FP, COST_FN, COST_TP, COST_TN, BASE_RATE)
 
 
-def expected_cost_per_1000(tpr: float, fpr: float) -> float:
+def expected_cost_per_1000(tpr: float, fpr: float, base_rate: float = None) -> float:
     # Reweights by the assumed production base rate, not the test split's defect share.
-    defective = BASE_RATE * (tpr * COST_TP + (1 - tpr) * COST_FN)
-    clean = (1 - BASE_RATE) * (fpr * COST_FP + (1 - fpr) * COST_TN)
+    base_rate = BASE_RATE if base_rate is None else base_rate
+    defective = base_rate * (tpr * COST_TP + (1 - tpr) * COST_FN)
+    clean = (1 - base_rate) * (fpr * COST_FP + (1 - fpr) * COST_TN)
     return 1000 * (defective + clean)
 
 
@@ -243,6 +261,7 @@ def sweep(tiles: pd.DataFrame) -> pd.DataFrame:
             row = dict(scorer=scorer, labels=labels, threshold=t, tp=tp, fp=fp, fn=fn, tn=tn, tpr=tpr, fpr=fpr)
             if costs_set():
                 row["cost_per_1000"] = expected_cost_per_1000(tpr, fpr)
+                row["cost_per_1000_dataset_rate"] = expected_cost_per_1000(tpr, fpr, BASE_RATE_DATASET)
             rows.append(row)
     return pd.DataFrame(rows)
 
@@ -272,12 +291,23 @@ def evaluate(weights: Path, data_yaml: Path, device: str) -> tuple[dict, pd.Data
 def save_sweep(metrics: dict, tiles: pd.DataFrame) -> None:
     """Sweep, pick the operating point from the current cost parameters, and write results/."""
     sweep_df = sweep(tiles)
-    metrics["costs"] = {"fp": COST_FP, "fn": COST_FN, "tp": COST_TP, "tn": COST_TN, "base_rate": BASE_RATE}
+    metrics["costs"] = {
+        "fp": COST_FP, "fn": COST_FN, "tp": COST_TP, "tn": COST_TN, "base_rate": BASE_RATE,
+        "board_defect_rate": BOARD_DEFECT_RATE,
+        "defective_tiles_per_defective_board": DEFECTIVE_TILES_PER_DEFECTIVE_BOARD,
+        "base_rate_dataset": BASE_RATE_DATASET,
+        "defective_tiles_per_defective_board_dataset": DEFECTIVE_TILES_PER_DEFECTIVE_BOARD_DATASET,
+        "labour_eur_per_hour": LABOUR_EUR_PER_HOUR, "review_seconds_per_tile": REVIEW_SECONDS_PER_TILE,
+        "verifier_accuracy": VERIFIER_ACCURACY, "tiles_per_day": TILES_PER_DAY,
+    }
     if costs_set():
-        best = sweep_df.query("scorer == 'finetuned' and labels == 'all_labels'").nsmallest(1, "cost_per_1000")
-        metrics["operating_point"] = best.iloc[0].to_dict()
+        finetuned = sweep_df.query("scorer == 'finetuned' and labels == 'all_labels'")
+        metrics["operating_point"] = finetuned.nsmallest(1, "cost_per_1000").iloc[0].to_dict()
+        metrics["operating_point_dataset_rate"] = (
+            finetuned.nsmallest(1, "cost_per_1000_dataset_rate").iloc[0].to_dict()
+        )
     else:
-        metrics["operating_point"] = None
+        metrics["operating_point"] = metrics["operating_point_dataset_rate"] = None
         print("\nCost parameters at the top of train.py are not set; sweep saved without costs.")
 
     (RESULTS_DIR / "metrics.json").write_text(json.dumps(metrics, indent=2))
