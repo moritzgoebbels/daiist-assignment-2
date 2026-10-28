@@ -302,6 +302,7 @@ CHANGED_NAMES = {
     "COST_AUTO_FAIL_FP": "Cost of scrapping a good board",
     "VERIFIER_ACCURACY": "Verifier accuracy",
     "labels": "Test labels (slivers)",
+    "MISLABELLED_TILES": "Test labels (2 tiles of 12_spur_04)",
 }
 
 

@@ -14,3 +14,6 @@ runs/
 
 # Never commit your API key
 .env
+
+# Personal handoff note
+HANDOFF.md

@@ -1,0 +1,5 @@
+design,chosen_on,lower,upper,cost_val,cost_test
+band chosen on validation,validation,0.08,0.67,41.52597778292063,161.70005070993915
+band chosen on test (main case),test,0.05,0.72,49.52745313584819,55.85362938278761
+"no auto-fail (main lower, upper 1.0)",test,0.05,1.0,51.72572899791716,57.88564908722111
+model alone chosen on validation,validation,0.51,0.51,118.33487618606804,166.64155317299333

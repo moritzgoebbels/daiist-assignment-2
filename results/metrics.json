@@ -516,7 +516,10 @@
       "upper": 0.72,
       "cost_per_1000": 55.85362938278761,
       "review_share": 0.029449000289771078,
-      "verifier_hours_per_day": 0.31412266975755815
+      "verifier_hours_per_day": 0.31412266975755815,
+      "cost_model_alone": NaN,
+      "cost_main_band": NaN,
+      "cost_no_auto_fail": NaN
     },
     {
       "case": "board defect rate 2%",
@@ -525,7 +528,10 @@
       "upper": 0.72,
       "cost_per_1000": 39.1965372355839,
       "review_share": 0.027475804114749345,
-      "verifier_hours_per_day": 0.2930752438906597
+      "verifier_hours_per_day": 0.2930752438906597,
+      "cost_model_alone": NaN,
+      "cost_main_band": NaN,
+      "cost_no_auto_fail": NaN
     },
     {
       "case": "board defect rate 5%",
@@ -534,7 +540,10 @@
       "upper": 0.72,
       "cost_per_1000": 89.16781367719504,
       "review_share": 0.033395392639814545,
-      "verifier_hours_per_day": 0.3562175214913552
+      "verifier_hours_per_day": 0.3562175214913552,
+      "cost_model_alone": NaN,
+      "cost_main_band": NaN,
+      "cost_no_auto_fail": NaN
     },
     {
       "case": "2.819 defective tiles per board (dataset)",
@@ -543,7 +552,10 @@
       "upper": 0.72,
       "cost_per_1000": 146.77359068627453,
       "review_share": 0.04021936274509804,
-      "verifier_hours_per_day": 0.42900653594771243
+      "verifier_hours_per_day": 0.42900653594771243,
+      "cost_model_alone": NaN,
+      "cost_main_band": NaN,
+      "cost_no_auto_fail": NaN
     },
     {
       "case": "labour 13 EUR/h",
@@ -552,7 +564,10 @@
       "upper": 0.72,
       "cost_per_1000": 50.61825155349497,
       "review_share": 0.029449000289771078,
-      "verifier_hours_per_day": 0.31412266975755815
+      "verifier_hours_per_day": 0.31412266975755815,
+      "cost_model_alone": NaN,
+      "cost_main_band": NaN,
+      "cost_no_auto_fail": NaN
     },
     {
       "case": "COST_FN 12 EUR",
@@ -561,7 +576,10 @@
       "upper": 0.72,
       "cost_per_1000": 19.00018110692553,
       "review_share": 0.029449000289771078,
-      "verifier_hours_per_day": 0.31412266975755815
+      "verifier_hours_per_day": 0.31412266975755815,
+      "cost_model_alone": NaN,
+      "cost_main_band": NaN,
+      "cost_no_auto_fail": NaN
     },
     {
       "case": "COST_FN 500 EUR",
@@ -570,7 +588,10 @@
       "upper": 0.05,
       "cost_per_1000": 375.84334250941754,
       "review_share": 0.9698120834540713,
-      "verifier_hours_per_day": 10.344662223510095
+      "verifier_hours_per_day": 10.344662223510095,
+      "cost_model_alone": NaN,
+      "cost_main_band": NaN,
+      "cost_no_auto_fail": NaN
     },
     {
       "case": "COST_AUTO_FAIL_FP 15 EUR",
@@ -579,7 +600,10 @@
       "upper": 0.72,
       "cost_per_1000": 55.85362938278761,
       "review_share": 0.029449000289771078,
-      "verifier_hours_per_day": 0.31412266975755815
+      "verifier_hours_per_day": 0.31412266975755815,
+      "cost_model_alone": NaN,
+      "cost_main_band": NaN,
+      "cost_no_auto_fail": NaN
     },
     {
       "case": "verifier accuracy 90%",
@@ -588,7 +612,10 @@
       "upper": 0.72,
       "cost_per_1000": 71.09377716603882,
       "review_share": 0.029449000289771078,
-      "verifier_hours_per_day": 0.31412266975755815
+      "verifier_hours_per_day": 0.31412266975755815,
+      "cost_model_alone": NaN,
+      "cost_main_band": NaN,
+      "cost_no_auto_fail": NaN
     },
     {
       "case": "verifier accuracy 99%",
@@ -597,7 +624,10 @@
       "upper": 0.72,
       "cost_per_1000": 43.66151115618661,
       "review_share": 0.029449000289771078,
-      "verifier_hours_per_day": 0.31412266975755815
+      "verifier_hours_per_day": 0.31412266975755815,
+      "cost_model_alone": NaN,
+      "cost_main_band": NaN,
+      "cost_no_auto_fail": NaN
     },
     {
       "case": "slivers ignored",
@@ -606,7 +636,22 @@
       "upper": 0.72,
       "cost_per_1000": 44.33823529411766,
       "review_share": 0.029660633484162893,
-      "verifier_hours_per_day": 0.3163800904977375
+      "verifier_hours_per_day": 0.3163800904977375,
+      "cost_model_alone": NaN,
+      "cost_main_band": NaN,
+      "cost_no_auto_fail": NaN
+    },
+    {
+      "case": "2 likely mislabelled tiles counted as defective",
+      "changed": "MISLABELLED_TILES",
+      "lower": 0.05,
+      "upper": 0.05,
+      "cost_per_1000": 32.92682926829268,
+      "review_share": 0.0,
+      "verifier_hours_per_day": 0.0,
+      "cost_model_alone": 32.92682926829268,
+      "cost_main_band": 49.72865853658537,
+      "cost_no_auto_fail": 51.740853658536594
     }
   ],
   "bootstrap": {
@@ -747,5 +792,39 @@
     "recall_flagged": 1.0,
     "recall_after_verifier": 0.993184982638889,
     "note": "All test boards are defective, so no board-level false positive rate can be measured."
-  }
+  },
+  "validation_check": [
+    {
+      "design": "band chosen on validation",
+      "chosen_on": "validation",
+      "lower": 0.08,
+      "upper": 0.67,
+      "cost_val": 41.52597778292063,
+      "cost_test": 161.70005070993915
+    },
+    {
+      "design": "band chosen on test (main case)",
+      "chosen_on": "test",
+      "lower": 0.05,
+      "upper": 0.72,
+      "cost_val": 49.52745313584819,
+      "cost_test": 55.85362938278761
+    },
+    {
+      "design": "no auto-fail (main lower, upper 1.0)",
+      "chosen_on": "test",
+      "lower": 0.05,
+      "upper": 1.0,
+      "cost_val": 51.72572899791716,
+      "cost_test": 57.88564908722111
+    },
+    {
+      "design": "model alone chosen on validation",
+      "chosen_on": "validation",
+      "lower": 0.51,
+      "upper": 0.51,
+      "cost_val": 118.33487618606804,
+      "cost_test": 166.64155317299333
+    }
+  ]
 }

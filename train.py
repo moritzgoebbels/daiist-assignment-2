@@ -67,6 +67,12 @@ PROJECT = "pcb-defect-detection-hdqc8"
 VERSION = 3
 CLASS_NAMES = ["missing_hole", "mouse_bite", "open_circuit", "short", "spur", "spurious_copper"]
 SLIVER_SIDE = 0.01  # boxes with a side under 1% of the tile are mostly cut off by tiling
+# Two "clean" test tiles of 12_spur_04 show a copper spur that the other photos of design 12 lack
+# at the same spot, so they are likely unlabelled defects. Used only as a sensitivity case.
+MISLABELLED_TILES = [
+    "12_spur_04_jpg.rf.492e3a4397d49b1d7c8edd2621af2752.jpg",
+    "12_spur_04_jpg.rf.4e76e88b05aeb7b252fa2354bda95f79.jpg",
+]
 
 # --- Training ------------------------------------------------------------------
 BASE_MODEL = "yolo11n.pt"
@@ -239,6 +245,26 @@ def score_tiles(weights: Path, device: str) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
+def score_val_tiles(weights: Path, device: str) -> pd.DataFrame:
+    """One row per validation tile, finetuned model only, for the validation check of the thresholds."""
+    images = sorted((DATASET_DIR / "valid" / "images").glob("*.jpg"))
+    predict = dict(imgsz=IMGSZ, device=device, conf=0.001, stream=True, verbose=False)
+    rows = []
+    for img, res in zip(images, YOLO(str(weights)).predict(images, **predict)):
+        boxes = read_labels(DATASET_DIR / "valid" / "labels" / f"{img.stem}.txt")
+        source = img.stem.split(".rf.")[0]
+        conf = res.boxes.conf.cpu().numpy()
+        rows.append({
+            "filename": img.name,
+            "board_photo": source.removesuffix("_jpg"),
+            "board_design": source.split("_")[0],
+            "gt_defect": int(bool(boxes)),
+            "gt_classes": ";".join(sorted({CLASS_NAMES[b[0]] for b in boxes})),
+            "max_conf": float(conf.max()) if len(conf) else 0.0,
+        })
+    return pd.DataFrame(rows)
+
+
 def costs_set() -> bool:
     return None not in (COST_FP, COST_FN, COST_TP, COST_TN, BASE_RATE)
 
@@ -313,6 +339,9 @@ def tile_truth_and_score(tiles: pd.DataFrame, labels: str = "all_labels") -> tup
     if labels == "no_slivers":
         tiles = tiles[tiles.only_slivers == 0]
         return tiles.gt_defect_no_slivers.to_numpy().astype(bool), tiles.max_conf.to_numpy()
+    if labels == "relabelled":
+        truth = tiles.gt_defect.astype(bool) | tiles.filename.isin(MISLABELLED_TILES)
+        return truth.to_numpy(), tiles.max_conf.to_numpy()
     return tiles.gt_defect.to_numpy().astype(bool), tiles.max_conf.to_numpy()
 
 
@@ -394,7 +423,7 @@ def band_breakdown(truth: np.ndarray, score: np.ndarray, lower: float, upper: fl
     }
 
 
-def sensitivity(tiles: pd.DataFrame) -> pd.DataFrame:
+def sensitivity(tiles: pd.DataFrame, main_band: tuple[float, float], model_alone: float) -> pd.DataFrame:
     """Optimal band when one main-case parameter changes."""
     per_board = DEFECTIVE_TILES_PER_DEFECTIVE_BOARD / TILES_PER_BOARD
     cases = [
@@ -411,6 +440,7 @@ def sensitivity(tiles: pd.DataFrame) -> pd.DataFrame:
         ("verifier accuracy 90%", "VERIFIER_ACCURACY", {"verifier_accuracy": 0.90}, "all_labels"),
         ("verifier accuracy 99%", "VERIFIER_ACCURACY", {"verifier_accuracy": 0.99}, "all_labels"),
         ("slivers ignored", "labels", {}, "no_slivers"),
+        ("2 likely mislabelled tiles counted as defective", "MISLABELLED_TILES", {}, "relabelled"),
     ]
     rows = []
     for name, changed, overrides, labels in cases:
@@ -418,8 +448,14 @@ def sensitivity(tiles: pd.DataFrame) -> pd.DataFrame:
         p = band_params(**overrides)
         lower, upper, _ = band_optimum(truth, score, p)
         b = band_breakdown(truth, score, lower, upper, p)
-        rows.append(dict(case=name, changed=changed, lower=lower, upper=upper, cost_per_1000=b["cost_per_1000"],
-                         review_share=b["review_share"], verifier_hours_per_day=b["verifier_hours_per_day"]))
+        row = dict(case=name, changed=changed, lower=lower, upper=upper, cost_per_1000=b["cost_per_1000"],
+                   review_share=b["review_share"], verifier_hours_per_day=b["verifier_hours_per_day"])
+        if labels == "relabelled":
+            # The main-case designs priced under the corrected labels.
+            cost = lambda lo, up: band_breakdown(truth, score, lo, up, p)["cost_per_1000"]
+            row.update(cost_model_alone=cost(model_alone, model_alone), cost_main_band=cost(*main_band),
+                       cost_no_auto_fail=cost(main_band[0], 1.0))
+        rows.append(row)
     return pd.DataFrame(rows)
 
 
@@ -516,6 +552,25 @@ def board_rollup(tiles: pd.DataFrame, lower: float, upper: float, verifier_accur
     return summary, boards
 
 
+def validation_check(val_tiles: pd.DataFrame, tiles: pd.DataFrame, test_band: tuple[float, float]) -> pd.DataFrame:
+    """Choose the thresholds on validation and price them on test, next to the test-chosen designs."""
+    p = band_params()
+    val, test = tile_truth_and_score(val_tiles), tile_truth_and_score(tiles)
+    cost = lambda split, lo, up: band_breakdown(*split, lo, up, p)["cost_per_1000"]
+    val_lower, val_upper, _ = band_optimum(*val, p)
+    # Model alone is the lower = upper diagonal; ties go to the lowest threshold.
+    val_alone = float(THRESHOLDS[np.nanargmin(np.diag(band_grid(*val, p)))])
+    designs = [
+        ("band chosen on validation", "validation", val_lower, val_upper),
+        ("band chosen on test (main case)", "test", *test_band),
+        ("no auto-fail (main lower, upper 1.0)", "test", test_band[0], 1.0),
+        ("model alone chosen on validation", "validation", val_alone, val_alone),
+    ]
+    return pd.DataFrame([dict(design=name, chosen_on=chosen_on, lower=lo, upper=up,
+                              cost_val=cost(val, lo, up), cost_test=cost(test, lo, up))
+                         for name, chosen_on, lo, up in designs])
+
+
 SERIES_BLUE, HIGHLIGHT, INK, MUTED, GRID, SURFACE = "#2a78d6", "#eb6834", "#0b0b0b", "#52514e", "#e1e0d9", "#fcfcfb"
 
 
@@ -589,7 +644,7 @@ def save_review_band(metrics: dict, tiles: pd.DataFrame, sweep_df: pd.DataFrame)
         "check_everything": band_breakdown(truth, score, -np.inf, np.inf, p),
         "do_nothing": band_breakdown(truth, score, np.inf, np.inf, p),
     }
-    sens = sensitivity(tiles)
+    sens = sensitivity(tiles, (lower, upper), model_alone)
     metrics["sensitivity"] = sens.to_dict(orient="records")
     metrics["bootstrap"] = bootstrap_band(tiles)
     cross = crossovers(tiles)
@@ -609,7 +664,7 @@ def save_review_band(metrics: dict, tiles: pd.DataFrame, sweep_df: pd.DataFrame)
     plot_band_heatmap(grid, lower, upper, cost)
 
 
-def save_sweep(metrics: dict, tiles: pd.DataFrame) -> None:
+def save_sweep(metrics: dict, tiles: pd.DataFrame, val_tiles: pd.DataFrame) -> None:
     """Sweep, pick the operating point from the current cost parameters, and write results/."""
     sweep_df = sweep(tiles)
     metrics["costs"] = {
@@ -628,6 +683,10 @@ def save_sweep(metrics: dict, tiles: pd.DataFrame) -> None:
             finetuned.nsmallest(1, "cost_per_1000_dataset_rate").iloc[0].to_dict()
         )
         save_review_band(metrics, tiles, sweep_df)
+        band = metrics["review_band"]
+        check = validation_check(val_tiles, tiles, (band["lower"], band["upper"]))
+        metrics["validation_check"] = check.to_dict(orient="records")
+        check.to_csv(RESULTS_DIR / "validation_check.csv", index=False)
     else:
         metrics["operating_point"] = metrics["operating_point_dataset_rate"] = None
         print("\nCost parameters at the top of train.py are not set; sweep saved without costs.")
@@ -688,14 +747,17 @@ def main() -> None:
         "seed": SEED, "train_device": device, "class_names": CLASS_NAMES, "sliver_side": SLIVER_SIDE,
     }
     tiles.to_csv(RESULTS_DIR / "test_tiles.csv", index=False)
-    save_sweep(metrics, tiles)
+    val_tiles = score_val_tiles(weights, device)
+    val_tiles.to_csv(RESULTS_DIR / "val_tiles.csv", index=False)
+    save_sweep(metrics, tiles, val_tiles)
 
 
 def sweep_only() -> None:
     # Cost changes only need the saved tile scores, not a new model.
     metrics = json.loads((RESULTS_DIR / "metrics.json").read_text())
     tiles = pd.read_csv(RESULTS_DIR / "test_tiles.csv")
-    save_sweep(metrics, tiles)
+    val_tiles = pd.read_csv(RESULTS_DIR / "val_tiles.csv")
+    save_sweep(metrics, tiles, val_tiles)
 
 
 if __name__ == "__main__":
