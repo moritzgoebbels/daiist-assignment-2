@@ -38,7 +38,7 @@ On top of that, the test split does not resemble real production. 70% of test ti
 
 ## Finetuning and baselines
 
-I used detection because the defects are small, and a box tells the verifier exactly where to look. I chose yolo11n, the smallest model, because it trains fast, especially locally on my laptop (Apple M5 Pro, 2.13 h of training). It was trained at 640 px for up to 100 epochs with early stopping (patience 20) and otherwise default Ultralytics settings (batch 16), and Ultralytics picked epoch 51 by validation mAP50-95.
+I used detection because the defects are small, and a box tells the verifier exactly where to look. I chose yolo11n, the smallest model, because it trains fast, especially locally on my laptop (2.13 h of training). It was trained at 640 px for up to 100 epochs with early stopping (patience 20) and otherwise default Ultralytics settings (batch 16), and Ultralytics picked epoch 51 by validation mAP50-95.
 
 | Model (same test split) | mAP50 | mAP50-95 |
 |---|---|---|
